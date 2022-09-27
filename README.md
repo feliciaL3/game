@@ -1,1 +1,0 @@
-In this laboratory I chose to work with the 15 Puzzle game. It has an interactive menu and a visual way to observe the progress and process of the game. It also has a colorful and well-structured output

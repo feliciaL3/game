@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+
 // colors
 #define ANSI_RESET_ALL          "\x1b[0m"
 #define ANSI_COLOR_BLACK        "\x1b[30m"
@@ -14,13 +15,14 @@
 #define ANSI_COLOR_CYAN         "\x1b[36m"
 #define ANSI_COLOR_WHITE        "\x1b[37m"
 
-#define START 1
-#define EXIT 2
-#define RESUME 3
-#define NONE -999
 #define SELECT 1
 #define UNABLE_MOVE 2
 #define WON 3
+#define START 1
+#define EXIT 2
+#define RESUME 3
+#define NONE -9999
+
 
 // CONTROL 
 #define ENTER ' '
@@ -38,64 +40,53 @@
 	{1,   2,   3,   4},
 	{5,   6,   7,   8},
 	{9,  10,  11,  12},
-	{13, 14,  15,  16} };
+	{13, 14,  15,  16} 
+	};
 
-int inputKey = ' ', mode = 1;
+int inputKey = ' ', mode = SELECT;
 int xi = 0; //coordinates of X
 int xj = 0;  // coordinates of X
 int nMoves = 0;
-int inputMode = -999; 
- int choosenNumberI = 0; 
- int choosenNumberJ = 0; 
- int numI = 0; //coordinates of number that will be chosen
- int numJ = 0; //coordinates of number that will be chosen
+int inputMode = -9999; 
+ int selectedNumberI = 0; 
+ int selectedNumberJ = 0; 
+ int numI = 0; //coordinates of number that will be selected
+ int numJ = 0; //coordinates of number that will be selected
+ int moves,length;
+char *moveHistory;
+char *sep;
 
-int elementNotInList(int element, int* list, int n) {
+//it checks to see if an element is not present in a list
+//for the parameters, element is what you're checking for, 
+//int* list is the list itself, int n is the length of the list
+int elemNotInList(int element, int* list, int n) {
 	for (int i = 0; i < n; i++)  if (list[i] == element) 
-	return 0;
-	return 1;
+	return 0;  
+	return 1; //if you cant find that element in the list
 }
 
 int menu(void) {
-	int menuOptionsLen = 3;
-	int  menuOptions[] = {1, 2, 3};
-	int c = -999;
+	int menuOptLen = 3;
+	int  menuOpt[] = {1, 2, 3};
+	int k = -9999;
 
-	while(elementNotInList(c, menuOptions, menuOptionsLen)) {
+	while(elemNotInList(k, menuOpt, menuOptLen)) {
 		system("clear");
 	
 
     printf("=> " ANSI_COLOR_YELLOW  "MENU!"  ANSI_RESET_ALL "\n");
 	printf("1.START\n");
-	printf("2.EXIT\n");
+	printf("2.LEAVE\n");
 	printf("3.RESUME\n");;
     printf("=> " ANSI_COLOR_YELLOW  "\t\t\t Select an Option!"  ANSI_RESET_ALL "\n");	
-		c = (int)(getc(stdin) - '0');
+		k = (int)(getc(stdin) - '0');
 	}
-
-return c;
-}
-
-void won() {
-	int winMatrix[4][4] = {
-		{1, 2, 3, 4},
-		{5, 6, 7, 8},
-		{9, 10, 11, 12},
-		{13, 14, 15, 16}
-	};
-
-	for (int i = 0; i < 4; i++)
-		for (int j = 1; j < 4; j++)
-			if (board[i][j] != winMatrix[i][j])
-				return;
-
-	mode = 3;
+return k;
 }
 
 void shuffleBoard() {
 	int flag;
 	int row = rand() % 4, column = rand() % 4;
-
 	for (int i = 0; i < 4; i++)
 		for (int j = 0; j < 4; j++) {
 			flag = board[i][j];
@@ -103,119 +94,148 @@ void shuffleBoard() {
 			board[row][column] = flag;
 		}
 }
-// display a single board no
-// 16  null. 
-void displayNumber(int n, char* color, int padding) {	
-	if (n == 16)
-		printf("%s%*c%s", color, padding, 'X', "\x1B[0m");
-	else
-		printf("%s%*d%s", color, padding, n, "\x1B[0m");
+//victory() checks whether board pattern matches the winning values victoryMatrix
+void victory() {
+	int victoryMatrix[4][4] = {
+		{1, 2, 3, 4},
+		{5, 6, 7, 8},
+		{9, 10, 11, 12},
+		{13, 14, 15, 16}
+	};
+
+
+	for (int i = 0; i < 4; i++)
+		for (int j = 1; j < 4; j++)
+			if (board[i][j] != victoryMatrix[i][j])
+				return;
+
+	mode = WON; 
 }
 
+
+// display a single board no
+// 16 = X
+void displayNumbers(int n, char* color, int padding) {	
+	if (n == 16)
+		printf("%s%*c%s", color, padding, 'X', "\x1b[37m");
+	else
+		printf("%s%*d%s", color, padding, n, "\x1b[37m");
+}
+
+void displayActualSituation() {
+    printf(ANSI_COLOR_CYAN"     ⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧\n" ANSI_RESET_ALL);
+	printf(ANSI_COLOR_MAGENTA"                          Now Coordinates   (%d, %d)\n",numI, numJ, ANSI_RESET_ALL );
+	printf(ANSI_COLOR_MAGENTA"                          X tile  Coordinates   (%d, %d)\n", xi, xj, ANSI_RESET_ALL);
+
+}
 void displayBoard() {
-    printf("=> " ANSI_COLOR_RED     "LET'S PLAY!"     ANSI_RESET_ALL "\n");    
+    printf("=> " ANSI_COLOR_RED     "GENERATING GAME.."     ANSI_RESET_ALL "\n");    
+    printf("=> " ANSI_COLOR_RED     "LET'S PLAY!"     ANSI_RESET_ALL "\n");  
+    printf("=> " ANSI_COLOR_RED     "OPERATE WITH ARROWS!"     ANSI_RESET_ALL "\n");   
     printf("=> " ANSI_COLOR_RED     "SUCCES!"     ANSI_RESET_ALL "\n");    
 	printf("\n\t\t\t\t");
 
 	for (int i = 0; i < 6; i++) {
 		if (i == 0 || i == 5)
 			for (int j = 0; j < 5; j++)
-					printf(ANSI_COLOR_GREEN  "⁑⁑⁑⁑"ANSI_RESET_ALL);					
+					printf(ANSI_COLOR_YELLOW "⁑⁑⁑⁑"ANSI_RESET_ALL);					
 		else
 			for (int j = 0; j < 6; j++) {
 				if (j == 0 || j == 5) 
-					printf(ANSI_COLOR_GREEN "⁑⁑"ANSI_RESET_ALL);
+					printf(ANSI_COLOR_YELLOW "⁑⁑"ANSI_RESET_ALL);
 				else {
 					if (numI == i - 1 && numJ == j - 1)
-						displayNumber(board[i - 1][j - 1], "\x1b[5m", 4);
+						displayNumbers(board[i - 1][j - 1], "\x1b[5m", 4);
 					else
-						displayNumber(board[i-1][j-1] , "\x1B[0m", 4);
+						displayNumbers(board[i-1][j-1] , "\x1B[0m", 4);
 				}
 			}
 		
 		printf("\n\t\t\t\t");
 	}
 
-	printf("\n\n");
+	printf("\n");
 }
 
-void displayProgress() {
-    
-		printf("No. of moves: %d\n", nMoves);
-	printf("Now (%d, %d)\n", numI, numJ);
-	printf("X tile (%d, %d)\n\n", xi, xj);
-}
 
-void displayInputHelp() {
-	if (mode == -999)
+
+void displayHint() {
+	if (mode == -9999)
 		return;
 
 	if (mode == 1){
         printf(ANSI_COLOR_CYAN"     ⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧\n" ANSI_RESET_ALL);
 	
-printf( ANSI_COLOR_BLUE   "           Select number to move operating with arrows\n" ANSI_RESET_ALL);
+printf( ANSI_COLOR_RED   "             \t\t\t  CONTROLS\n" ANSI_RESET_ALL);
 	        printf( ANSI_COLOR_CYAN"     ⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧\n"ANSI_RESET_ALL);
 
     }
-		else if (mode == 2)
-		printf("ERROR !  Unable to move this! \n");
 
-//green
-//
-    printf("=> " ANSI_COLOR_RED     "CONTROLS!"     ANSI_RESET_ALL "\n");   
-	printf(ANSI_COLOR_CYAN" r "   ANSI_RESET_ALL "- Reset game\n");
-	printf(ANSI_COLOR_CYAN "Arrows "ANSI_RESET_ALL " - Pass through  tiles\n");
-	printf(ANSI_COLOR_CYAN "Space  "ANSI_RESET_ALL " - Choose a tile to replace with the empty tile (X)\n");
-	printf(ANSI_COLOR_CYAN "  u  "ANSI_RESET_ALL "   - Undo move\n");
-	printf(ANSI_COLOR_CYAN "  s   "ANSI_RESET_ALL "  - Save and quit \n");
-	printf(ANSI_COLOR_CYAN "  q  "ANSI_RESET_ALL "   - Quit \n\n");
-    printf(ANSI_COLOR_RED  "  !!  -Press Enter after arrow or space\n\n"ANSI_RESET_ALL);
+		else if (mode == UNABLE_MOVE)
+		printf("ERROR !  Unable to move this! \n");
+    printf("> "ANSI_COLOR_CYAN "  u  "ANSI_RESET_ALL "   - Undo move\n");
+	printf("> "ANSI_COLOR_CYAN "  s   "ANSI_RESET_ALL "  - Save and leave \n");
+	printf("> "ANSI_COLOR_CYAN "  l  "ANSI_RESET_ALL "   - Leave \n");
+	printf("> " ANSI_COLOR_CYAN"  r    "   ANSI_RESET_ALL " - Reset game\n");
+	printf("> "ANSI_COLOR_CYAN "Arrows "ANSI_RESET_ALL " - Pass through  tiles\n");
+	printf("> "ANSI_COLOR_CYAN "Space  "ANSI_RESET_ALL " - Choose a tile to replace with the empty tile (X)\n\n");
+	    printf(ANSI_COLOR_CYAN"     ⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧\n" ANSI_RESET_ALL);
+
+    printf("!! "ANSI_COLOR_RED  "             Press Enter after arrow or space\n\n"ANSI_RESET_ALL);
+    printf(ANSI_COLOR_CYAN"     ⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧⤧\n" ANSI_RESET_ALL);
+
 }
 
+//it iterates over a 4x4 board trying to find which value of the board equals 16
+//and returns those coordinates in tot he form of the global variable xi xj
 void getXCoords() {
 	for (int i = 0; i < 4; i++)
 		for (int j = 0; j < 4; j++)
 			if (board[i][j] == 16) {
 				xi = i;
 				xj = j;
-
 				return;
 			}
 }
-
 void move(int direction) {
+	//up
 	if (direction == 65 && numI > 0)
 		numI--;
+			//down
 	else if (direction == 66 && numI < 3)
 		numI++;
+		//right
 	else if (direction == 67 && numJ < 3)
 		numJ++;
+    //left		
 	else if (direction == 68 && numJ > 0)
 		numJ--;
+	
+
+	
 }
 //checking if tile is near X
 int canMoveTile() {
 	if (abs(xi - numI) <= 1 && abs(xj - numJ) <= 1 && abs(xi - numI) + abs(xj - numJ) <= 1) {
-		mode = 2;
-
+		mode = UNABLE_MOVE;
 		return 1;
 	}
 
 	return 0;
 }
 
-void swapTiles() {
+void replaceTiles() {
 	if (mode != 1)
 		return;
 
-	if (inputKey == ' ' && board[numI][numJ] != 16 && canMoveTile()) {
+	if (inputKey == ENTER && board[numI][numJ] != 16 && canMoveTile()) {
 		board[xi][xj] = board[numI][numJ];
 		board[numI][numJ] = 16;
 
-		mode = 1;
+		mode = SELECT;
 		nMoves++;
 	}
-	else if (inputKey == 65 || inputKey == 66 || inputKey == 67 || inputKey == 68)
+	else if (inputKey == UP || inputKey == 66 || inputKey == 67 || inputKey == 68)
 		move(inputKey);
 }
 //1 solvable
@@ -244,7 +264,7 @@ int isSolvable() {
 //Initializes the game's board 
 void initGame() {
 	nMoves = 0;
-	mode = 1;
+	mode = SELECT;
 
 	shuffleBoard();
 	while (isSolvable() == 0)
@@ -253,26 +273,22 @@ void initGame() {
 	getXCoords();
 	numI = 0;
 	numJ = 0;
+
 }
 
 void resume() {
 	FILE *f;
 	char buff[3];
-
+//it will save the order and 2nd row will show no of moves
 	f = fopen("./condition.txt", "r");
 	for (int i = 0; i < 4; i++)
 		for (int j = 0; j < 4; j++) {
 			fscanf(f, "%s", buff);	
-
 			board[i][j] = atoi(buff);
 		}
-
-	fscanf(f, "\n%s", buff);
-	nMoves = atoi(buff);
-
 	fclose(f);
 
-	mode = 1;
+	mode = SELECT;
 	numI = 0;
 	numJ = 0;
 	getXCoords();
@@ -282,27 +298,22 @@ void displayWinText() {
 	printf(ANSI_COLOR_RED "\n\n\tVictory!\n"ANSI_RESET_ALL );
 }
 void exitGame() {
-	printf(ANSI_COLOR_RED "\n\n\t Quiting \n"ANSI_RESET_ALL );
-
-	exit(0);
+	printf(ANSI_COLOR_RED "\n\n\t Leaving \n"ANSI_RESET_ALL );
+    exit(0);
 }
 //saves the current state of the board 
 void save() {
 	FILE *f;
 
 	f = fopen("./condition.txt", "w");
-
 	for (int i = 0; i < 4; i++)
 		for (int j = 0; j < 4; j++)
 			fprintf(f, "%d ", board[i][j]);
-//saves the current state of the game
-	fprintf(f, "\n%d", nMoves);
+	fclose(f); }
 
-	fclose(f);
-}
 
 void play(int shouldResume) {
-	
+	//setup
 	if (shouldResume == 1)
 		resume();
 	else
@@ -312,22 +323,21 @@ void play(int shouldResume) {
 	while(1) {
 		system("clear");
 		displayBoard();
-
-		if (mode == 3) {
+//mode 3=mode win 
+		if (mode == WON) {
 			displayWinText();
 			exit(0);
 		}
 
+		displayActualSituation();
+		displayHint();
 
-		displayProgress();
-		displayInputHelp();
-
-		mode = 1;
+		mode = SELECT;
 		getXCoords();
 
 		inputKey = (int)getchar();
 
-		if (inputKey == 'q')
+		if (inputKey == 'l')
 			exitGame();
 		else if (inputKey == 'r')
 			initGame();
@@ -336,10 +346,10 @@ void play(int shouldResume) {
 			exit(0);
 		}
 
-		if (mode == 1)
-			swapTiles();
-
-		won();
+		if (mode == SELECT)
+			replaceTiles();
+ //game turning WON in case of winning
+		victory();
 	}
 }
 

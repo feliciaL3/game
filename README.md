@@ -1,1 +1,1 @@
-In this laboratory I chose to work with the 15 Puzzle game. It has an interactive menu and a visual way to observe the progress and process of the game. It also has a colorful and well-structured output
+I worked with the 15 Puzzle Game. Features: colorful output and clear design, resume option, restart feature, a menu and a visual way to observe the game process and progress.
